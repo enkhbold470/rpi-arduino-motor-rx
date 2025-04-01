@@ -22,7 +22,7 @@ def run_test_sequence():
         logger.info("Enabling system")
         print("\nActivating the system...")
         controller.toggle_system()
-        controller.system_active = True  # Make sure to track state
+        system_active = True  # Local tracking of system state
         time.sleep(1.0)  # Give it more time to initialize
         
         print("System activated! Motors should now respond to commands.\n")
@@ -58,7 +58,7 @@ def run_test_sequence():
         logger.info("Disabling system")
         print("\nDeactivating system...")
         controller.toggle_system()
-        controller.system_active = False
+        system_active = False
         print("System deactivated")
        
     except Exception as e:
@@ -85,40 +85,43 @@ def interactive_mode():
     print("\n🤖 Interactive Control Mode 🤖")
     print("-----------------------------")
     print("Commands:")
-    print("  X - FIRST ACTIVATE THE SYSTEM! (very important)")
+    print("  X - ACTIVATE/DEACTIVATE SYSTEM (toggle)")
     print("  F - Move Forward")
     print("  B - Move Backward")
     print("  L - Turn Left")
     print("  R - Turn Right")
     print("  S - Stop")
     print("  0-9 - Set Speed")
-    print("  X - Toggle System On/Off")
     print("  ? - Get Status")
     print("  Q - Quit")
     print("")
-    print("⚠️  IMPORTANT: You MUST activate the system with 'X' before movement commands will work!")
+    print("⚠️  IMPORTANT: You MUST first activate the system with 'X' before movement commands will work!")
     print("")
    
+    # Variable to track the system state
+    system_active = False
+    print(f"🔴 Current system status: {'ACTIVE ✅' if system_active else 'INACTIVE ❌'}")
+    
     try:
         while True:
-            cmd = input("Enter command: ").strip().upper()
+            cmd = input(f"[{'ACTIVE ✅' if system_active else 'INACTIVE ❌'}] Enter command: ").strip().upper()
            
             if cmd == 'Q':
                 break
             
             if cmd == 'X':
                 controller.toggle_system()
-                controller.system_active = not controller.system_active
-                print(f"System is now {'ACTIVE' if controller.system_active else 'INACTIVE'}")
-                print("You can now control the motors." if controller.system_active else "Motors will not respond until system is activated.")
+                system_active = not system_active
+                print(f"System is now {'ACTIVE ✅' if system_active else 'INACTIVE ❌'}")
+                print("You can now control the motors." if system_active else "Motors will not respond until system is activated.")
                 
             elif cmd == '?':
-                status = f"System is {'ACTIVE' if controller.system_active else 'INACTIVE'}"
+                status = f"System is {'ACTIVE ✅' if system_active else 'INACTIVE ❌'}"
                 print(f"Status: {status}")
                 controller.send_command(cmd)
                 
             elif cmd in ['F', 'B', 'L', 'R']:
-                if not controller.system_active:
+                if not system_active:
                     print("⚠️  ERROR: System is not active! First use 'X' to activate the system.")
                     continue
                 
