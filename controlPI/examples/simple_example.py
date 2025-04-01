@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Simple example demonstrating how to use the zenbot package.
+Simple example demonstrating how to use the zenbot-pi package.
 """
 import time
 import logging
@@ -14,7 +14,7 @@ logging.basicConfig(
 
 def drive_square_pattern():
     """Drive in a square pattern."""
-    print("ZenBot Example: Drive in a Square Pattern")
+    print("ZenBot-Pi Example: Drive in a Square Pattern")
     print("===========================================")
     
     # Initialize the controller with your I2C bus and Arduino address

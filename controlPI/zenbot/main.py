@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ZenBot - I2C Motor Controller CLI Tool
+ZenBot-Pi - I2C Motor Controller CLI Tool
 """
 import time
 import logging
@@ -75,7 +75,7 @@ def interactive_mode(i2c_bus=3, address=0x08):
         logger.error("Failed to communicate with Arduino")
         return
    
-    print("\n🤖 ZenBot Interactive Control Mode 🤖")
+    print("\n🤖 ZenBot-Pi Interactive Control Mode 🤖")
     print("-----------------------------")
     print("System is always active in this version!")
     print("Commands:")
@@ -161,7 +161,7 @@ def setup_logging(level=logging.INFO):
         level=level,
         format='%(asctime)s [%(levelname)s] %(message)s',
         handlers=[
-            logging.FileHandler("zenbot.log"),
+            logging.FileHandler("zenbot-pi.log"),
             logging.StreamHandler(sys.stdout)
         ]
     )
@@ -169,7 +169,7 @@ def setup_logging(level=logging.INFO):
 def main():
     """Main CLI entry point"""
     parser = argparse.ArgumentParser(
-        description="ZenBot - I2C Motor Controller for Raspberry Pi/Arduino robots"
+        description="ZenBot-Pi - I2C Motor Controller for Raspberry Pi/Arduino robots"
     )
     
     # Add arguments
@@ -223,7 +223,7 @@ def main():
         direct_command(args.action, i2c_bus=args.i2c_bus, address=args.address)
     else:
         # Default to interactive mode if no command specified
-        print("\nZenBot Motor Controller")
+        print("\nZenBot-Pi Motor Controller")
         print("1. Run test sequence")
         print("2. Start interactive mode")
         choice = input("Select an option (1/2): ").strip()
