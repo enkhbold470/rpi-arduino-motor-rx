@@ -1,1 +1,2 @@
 python-dotenv
+smbus2>=0.4.2
