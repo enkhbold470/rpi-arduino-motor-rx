@@ -21,6 +21,7 @@ class MotorController:
         self.i2c_bus = i2c_bus
         self.address = address
         self.bus = None
+        self.system_active = False
         logger.info(f"Initializing MotorController on I2C bus {i2c_bus}, address 0x{address:02X}")
         self.connect()
        
@@ -36,6 +37,10 @@ class MotorController:
                 # Send a status request command
                 self.bus.write_byte(self.address, ord('?'))
                 logger.info("I2C connection successful")
+                
+                # Wait for Arduino to stabilize
+                time.sleep(0.5)
+                
                 return True
             except OSError as e:
                 logger.error(f"I2C communication error: {str(e)}")
@@ -58,8 +63,13 @@ class MotorController:
             logger.debug(f"Sending command: '{chr(cmd_byte)}' (0x{cmd_byte:02X})")
             self.bus.write_byte(self.address, cmd_byte)
             
+            # Update system state if toggle command
+            if chr(cmd_byte) == 'X':
+                self.system_active = not self.system_active
+                logger.info(f"System state toggled to: {'ACTIVE' if self.system_active else 'INACTIVE'}")
+            
             # Wait a moment for Arduino to process
-            time.sleep(0.1)
+            time.sleep(0.2)
             
             # No direct response over I2C unless we implement a request mechanism
             return f"Command '{chr(cmd_byte)}' sent successfully"
@@ -74,35 +84,56 @@ class MotorController:
        
         try:
             # Send status request
-            self.send_command('?')
+            response = self.send_command('?')
             logger.info("Status request sent")
             
-            # Since we don't have a response mechanism yet, we just assume it worked if no exception
+            # Try to get system state
+            self.check_system_state()
+            
+            # Assume the test passes if no exception occurred
             logger.info("Communication test passed!")
             return True
         except Exception as e:
             logger.error(f"Communication test failed: {str(e)}")
             return False
+    
+    def check_system_state(self):
+        """Try to determine if the system is active by sending a status request"""
+        try:
+            logger.info("Checking system state...")
+            self.send_command('?')
+            # Since we can't read back via I2C in this simple implementation,
+            # we're not able to determine the actual state here
+        except Exception as e:
+            logger.error(f"Failed to check system state: {str(e)}")
    
     # Movement commands
     def forward(self):
         """Move forward"""
         logger.info("Moving forward")
+        if not self.system_active:
+            logger.warning("System is not active, forward command may not work")
         return self.send_command('F')
    
     def backward(self):
         """Move backward"""
         logger.info("Moving backward")
+        if not self.system_active:
+            logger.warning("System is not active, backward command may not work")
         return self.send_command('B')
    
     def left(self):
         """Turn left"""
         logger.info("Turning left")
+        if not self.system_active:
+            logger.warning("System is not active, left command may not work")
         return self.send_command('L')
    
     def right(self):
         """Turn right"""
         logger.info("Turning right")
+        if not self.system_active:
+            logger.warning("System is not active, right command may not work")
         return self.send_command('R')
    
     def stop(self):
@@ -122,7 +153,10 @@ class MotorController:
     def toggle_system(self):
         """Toggle system state (on/off)"""
         logger.info("Toggling system state")
-        return self.send_command('X')
+        response = self.send_command('X')
+        # Allow time for the Arduino to process toggle command
+        time.sleep(0.5)
+        return response
    
     def get_status(self):
         """Get system status"""

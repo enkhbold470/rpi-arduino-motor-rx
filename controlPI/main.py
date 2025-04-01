@@ -20,33 +20,46 @@ def run_test_sequence():
            
         # Turn on the system
         logger.info("Enabling system")
+        print("\nActivating the system...")
         controller.toggle_system()
-        time.sleep(0.5)
+        controller.system_active = True  # Make sure to track state
+        time.sleep(1.0)  # Give it more time to initialize
+        
+        print("System activated! Motors should now respond to commands.\n")
        
         # Test movement
         logger.info("Testing movement commands")
        
         controller.set_speed(5)  # Set medium speed
         time.sleep(0.5)
+        print("Speed set to 5 (medium)")
        
+        print("Moving forward for 1 second...")
         controller.forward()
         time.sleep(1)
        
+        print("Turning right for 1 second...")
         controller.right()
         time.sleep(1)
        
+        print("Moving backward for 1 second...")
         controller.backward()
         time.sleep(1)
        
+        print("Turning left for 1 second...")
         controller.left()
         time.sleep(1)
        
+        print("Stopping motors...")
         controller.stop()
         time.sleep(0.5)
        
         # Turn off the system
         logger.info("Disabling system")
+        print("\nDeactivating system...")
         controller.toggle_system()
+        controller.system_active = False
+        print("System deactivated")
        
     except Exception as e:
         logger.error(f"Error during testing: {str(e)}")
@@ -69,9 +82,10 @@ def interactive_mode():
         logger.error("Failed to communicate with Arduino")
         return
    
-    print("\nInteractive Control Mode")
-    print("------------------------")
+    print("\n🤖 Interactive Control Mode 🤖")
+    print("-----------------------------")
     print("Commands:")
+    print("  X - FIRST ACTIVATE THE SYSTEM! (very important)")
     print("  F - Move Forward")
     print("  B - Move Backward")
     print("  L - Turn Left")
@@ -82,6 +96,8 @@ def interactive_mode():
     print("  ? - Get Status")
     print("  Q - Quit")
     print("")
+    print("⚠️  IMPORTANT: You MUST activate the system with 'X' before movement commands will work!")
+    print("")
    
     try:
         while True:
@@ -89,10 +105,30 @@ def interactive_mode():
            
             if cmd == 'Q':
                 break
-               
-            if cmd in ['F', 'B', 'L', 'R', 'S', 'X', '?'] or cmd.isdigit():
+            
+            if cmd == 'X':
+                controller.toggle_system()
+                controller.system_active = not controller.system_active
+                print(f"System is now {'ACTIVE' if controller.system_active else 'INACTIVE'}")
+                print("You can now control the motors." if controller.system_active else "Motors will not respond until system is activated.")
+                
+            elif cmd == '?':
+                status = f"System is {'ACTIVE' if controller.system_active else 'INACTIVE'}"
+                print(f"Status: {status}")
+                controller.send_command(cmd)
+                
+            elif cmd in ['F', 'B', 'L', 'R']:
+                if not controller.system_active:
+                    print("⚠️  ERROR: System is not active! First use 'X' to activate the system.")
+                    continue
+                
                 response = controller.send_command(cmd)
                 print(f"Response: {response}")
+                
+            elif cmd == 'S' or cmd.isdigit():
+                response = controller.send_command(cmd)
+                print(f"Response: {response}")
+                
             else:
                 print("Invalid command")
                
