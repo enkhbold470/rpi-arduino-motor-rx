@@ -1,11 +1,32 @@
-# ControlPI
+# ZenBot
 
-A Python package for controlling Arduino-based motor robots over I2C communication.
+[![PyPI version](https://badge.fury.io/py/zenbot.svg)](https://badge.fury.io/py/zenbot)
+[![Python 3.6+](https://img.shields.io/badge/python-3.6+-blue.svg)](https://www.python.org/downloads/release/python-360/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+A Python package for controlling Arduino-based motor robots over I2C communication from a Raspberry Pi or other Linux SBCs.
+
+## Features
+
+- Simple control of DC motors connected to an Arduino
+- I2C communication protocol for reliability
+- Command-line interface for manual control
+- Library for integration into your Python projects
 
 ## Installation
 
+### From PyPI
+
 ```bash
-pip install -r requirements.txt
+pip install zenbot
+```
+
+### From Source
+
+```bash
+git clone https://github.com/yourusername/zenbot.git
+cd zenbot
+pip install -e .
 ```
 
 ## Hardware Setup
@@ -15,7 +36,7 @@ pip install -r requirements.txt
    - Pi SCL → Arduino A5 (SCL)
    - Pi GND → Arduino GND
 
-2. Make sure the Arduino is running the provided sketch with I2C slave address set to 0x08.
+2. Make sure the Arduino is running the provided sketch (see `arduino_sketches` directory) with I2C slave address set to 0x08.
 
 3. Enable I2C on your Raspberry Pi:
    ```bash
@@ -25,27 +46,47 @@ pip install -r requirements.txt
 
    For Orange Pi, use `sudo armbian-config` or appropriate method.
 
-## Using the package
+## Using the CLI
+
+The package provides a command-line interface:
+
+```bash
+# Run interactive control mode
+zenbot interactive
+
+# Run test sequence
+zenbot test
+
+# Send direct commands
+zenbot direct forward
+zenbot direct stop
+zenbot direct 5  # Set speed to 5
+
+# Use different I2C bus or address
+zenbot --i2c-bus 1 --address 0x09 interactive
+```
+
+## Using the Library
 
 Basic usage example:
 
 ```python
-from controlPI import MotorController
+from zenbot import MotorController
 
 # Create a controller, specifying I2C bus (default: 3) and address (default: 0x08)
 controller = MotorController(i2c_bus=3, address=0x08)
 
 # Test communication with Arduino
 if controller.test_communication():
-    # Turn on the system
-    controller.toggle_system()
-    
     # Set speed (0-9)
     controller.set_speed(5)
     
     # Move the robot
     controller.forward()
-    # ... other commands ...
+    
+    # Wait a bit
+    import time
+    time.sleep(2)
     
     # Stop motors
     controller.stop()
@@ -62,22 +103,29 @@ if controller.test_communication():
 - `right()` - Turn robot right
 - `stop()` - Stop all motors
 - `set_speed(level)` - Set speed level (0-9)
-- `toggle_system()` - Turn system on/off
 - `get_status()` - Get system status
+- `send_command(cmd)` - Send a raw command character
+- `close()` - Close I2C connection
 
-## Running the demo
+## Arduino Setup
 
-The package includes a demo script to test your setup:
+This library requires an Arduino running the provided sketch. The Arduino sketch:
 
-```bash
-python main.py
-```
-
-Select option 1 for a test sequence or option 2 for interactive control.
+1. Listens for commands on I2C bus (address 0x08 by default)
+2. Controls motor driver shield/circuit based on received commands
+3. Provides status feedback
 
 ## Troubleshooting
 
-- Check I2C connection with `i2cdetect -y 3` (use your bus number)
-- Ensure Arduino has the correct I2C address (0x08)
+- Check I2C connection with `i2cdetect -y [bus_number]`
+- Ensure Arduino has the correct I2C address (0x08 by default)
 - Verify power supply is adequate for motors
-- Check log file `motor_controller.log` for debugging information 
+- Check log file `zenbot.log` for debugging information
+
+## License
+
+MIT License - see LICENSE file for details
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request. 
