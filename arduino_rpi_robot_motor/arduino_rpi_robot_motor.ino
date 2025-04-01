@@ -1,22 +1,28 @@
+#include <SoftwareSerial.h>
+
 // Motor control pins
-const int enA = 6;
-const int in1 = 4;
-const int in2 = 5;
-const int in3 = 7;
-const int in4 = 8;
-const int enB = 9;
+const int enA = 6;  // Enable motor A
+const int in1 = 4;  // Motor A input 1
+const int in2 = 5;  // Motor A input 2
+const int in3 = 7;  // Motor B input 1
+const int in4 = 8;  // Motor B input 2
+const int enB = 9;  // Enable motor B
 
 // Buzzer and button pins
 const int buzzer = A0;
 const int startButton = 12;
 
+// Software Serial (RX, TX)
+SoftwareSerial orangePiSerial(A1, A2); // RX = A1, TX = A2
+
 // Variables
-int buttonState = 0;
-int lastButtonState = 0;
-bool systemActive = false;
+bool systemActive = false;    // System active flag
+int currentSpeed = 200;       // Current motor speed (0-255)
+unsigned long lastActivityTime = 0;
+const unsigned long WATCHDOG_TIMEOUT = 15000;  // 15 second timeout
 
 void setup() {
-  // Initialize motor control pins as outputs
+  // Initialize motor control pins
   pinMode(enA, OUTPUT);
   pinMode(in1, OUTPUT);
   pinMode(in2, OUTPUT);
@@ -28,140 +34,203 @@ void setup() {
   pinMode(buzzer, OUTPUT);
   pinMode(startButton, INPUT_PULLUP);
   
-  // Start serial communication
+  // Set initial motor speed
+  analogWrite(enA, currentSpeed);
+  analogWrite(enB, currentSpeed);
+  
+  // Start hardware serial (for debugging)
   Serial.begin(9600);
   
-  // Print instructions
-  Serial.println("Motor Control System Ready");
-  Serial.println("Commands:");
-  Serial.println("F - Forward");
-  Serial.println("B - Backward");
-  Serial.println("L - Turn Left");
-  Serial.println("R - Turn Right");
-  Serial.println("S - Stop");
-  Serial.println("1-9 - Set speed (1=slowest, 9=fastest)");
-  Serial.println("X - Toggle system (enable/disable)");
-  Serial.println("Press physical button or send 'X' to start system");
+  // Start software serial for Orange Pi communication
+  orangePiSerial.begin(9600);
   
-  // Initial state - motors stopped
+  // Initial state
   stopMotors();
+  
+  // Short beep to indicate boot
+  beep(100);  
+  delay(100);
+  
+  Serial.println("BOOT:READY");
+  orangePiSerial.println("BOOT:READY");
+
+  // Double beep to indicate ready
+  beep(100);
+  delay(100);
+  beep(100);
+  
+  lastActivityTime = millis();
 }
 
 void loop() {
-  // Check button state
-  buttonState = digitalRead(startButton);
-  
-  // Detect button press (LOW because of INPUT_PULLUP)
-  if (buttonState == LOW && lastButtonState == HIGH) {
-    systemActive = !systemActive;
-    beep();
-    Serial.print("System ");
-    Serial.println(systemActive ? "ACTIVATED" : "DEACTIVATED");
-    delay(200); // debounce
+  // Check button state for manual toggle
+  if (digitalRead(startButton) == LOW) {
+    toggleSystem();
+    beep(150);  // Feedback beep
+    delay(200);  // Longer debounce
   }
-  lastButtonState = buttonState;
+
+  // Process serial commands
+  processSerialCommands();
   
-  // Process serial commands if available
-  if (Serial.available() > 0) {
-    char command = Serial.read();
-    processCommand(command);
+  // Check for watchdog timeout
+  if (systemActive && millis() - lastActivityTime > WATCHDOG_TIMEOUT) {
+    Serial.println("WATCHDOG: Timeout - stopping motors");
+    stopMotors();
+    systemActive = false;
+    beep(800);  // Long warning beep
+  }
+}
+
+void processSerialCommands() {
+  // Process from Orange Pi serial
+  while (orangePiSerial.available() > 0) {
+    char c = orangePiSerial.read();
+    
+    // Process single character commands immediately
+    if (c == 'F' || c == 'B' || c == 'L' || c == 'R' || c == 'S' || 
+        c == 'X' || c == '?' || (c >= '0' && c <= '9')) {
+      
+      processCommand(c);
+      
+      // Consume any trailing newlines or carriage returns
+      while (orangePiSerial.available() > 0) {
+        char next = orangePiSerial.peek();
+        if (next == '\n' || next == '\r') {
+          orangePiSerial.read(); // Consume it
+        } else {
+          break;
+        }
+      }
+    }
+  }
+  
+  // Process from debug serial
+  while (Serial.available() > 0) {
+    char c = Serial.read();
+    
+    // Process single character commands immediately
+    if (c == 'F' || c == 'B' || c == 'L' || c == 'R' || c == 'S' || 
+        c == 'X' || c == '?' || (c >= '0' && c <= '9')) {
+      
+      processCommand(c);
+      
+      // Consume any trailing newlines or carriage returns
+      while (Serial.available() > 0) {
+        char next = Serial.peek();
+        if (next == '\n' || next == '\r') {
+          Serial.read(); // Consume it
+        } else {
+          break;
+        }
+      }
+    }
   }
 }
 
 void processCommand(char command) {
-  command = toupper(command); // Convert to uppercase for case-insensitive handling
+  lastActivityTime = millis();  // Reset watchdog timer
+  String response;
   
-  if (!systemActive && command != 'X') {
-    Serial.println("System is inactive. Press button or send 'X' to activate.");
-    return;
-  }
+  // Echo command for verification
+  Serial.print("CMD: ");
+  Serial.println(command);
   
+  // Process based on command character
   switch (command) {
     case 'F': // Forward
-      forward();
-      Serial.println("Moving FORWARD");
+      if (systemActive) {
+        forward();
+        response = "ACK:FWD";
+      } else {
+        response = "ERR:INACTIVE";
+      }
       break;
       
     case 'B': // Backward
-      backward();
-      Serial.println("Moving BACKWARD");
+      if (systemActive) {
+        backward();
+        response = "ACK:BWD";
+      } else {
+        response = "ERR:INACTIVE";
+      }
       break;
       
-    case 'L': // Turn Left
-      turnLeft();
-      Serial.println("Turning LEFT");
+    case 'L': // Left
+      if (systemActive) {
+        turnLeft();
+        response = "ACK:LEFT";
+      } else {
+        response = "ERR:INACTIVE";
+      }
       break;
       
-    case 'R': // Turn Right
-      turnRight();
-      Serial.println("Turning RIGHT");
+    case 'R': // Right
+      if (systemActive) {
+        turnRight();
+        response = "ACK:RIGHT";
+      } else {
+        response = "ERR:INACTIVE";
+      }
       break;
       
     case 'S': // Stop
       stopMotors();
-      Serial.println("STOPPED");
+      response = "ACK:STOP";
       break;
       
-    case '1': // Speed 1 (slowest)
-      setSpeed(28); // ~30% of 255
-      Serial.println("Speed set to 1 (slow)");
-      break;
-      
-    case '2':
-      setSpeed(56); // ~55% of 255
-      Serial.println("Speed set to 2");
-      break;
-      
-    case '3':
-      setSpeed(85); // ~85% of 255
-      Serial.println("Speed set to 3");
-      break;
-      
-    case '4':
-      setSpeed(113); // ~113% of 255
-      Serial.println("Speed set to 4");
-      break;
-      
-    case '5':
-      setSpeed(141); // ~141% of 255
-      Serial.println("Speed set to 5 (medium)");
-      break;
-      
-    case '6':
-      setSpeed(170); // ~170% of 255
-      Serial.println("Speed set to 6");
-      break;
-      
-    case '7':
-      setSpeed(198); // ~198% of 255
-      Serial.println("Speed set to 7");
-      break;
-      
-    case '8':
-      setSpeed(226); // ~226% of 255
-      Serial.println("Speed set to 8");
-      break;
-      
-    case '9':
-      setSpeed(255); // 100%
-      Serial.println("Speed set to 9 (fastest)");
+    case '0'...'9': // Speed
+      int speedLevel = command - '0';
+      setSpeed(map(speedLevel, 0, 9, 50, 255));  // Map 0-9 to 50-255
+      response = "ACK:SPD:" + String(speedLevel);
       break;
       
     case 'X': // Toggle system
-      systemActive = !systemActive;
-      beep();
-      Serial.print("System ");
-      Serial.println(systemActive ? "ACTIVATED" : "DEACTIVATED");
-      if (!systemActive) stopMotors();
+      toggleSystem();
+      response = "ACK:SYS:" + String(systemActive ? "ON" : "OFF");
+      break;
+      
+    case '?': // Status
+      response = "STAT:" + String(systemActive ? "ON" : "OFF") + 
+                ":SPD:" + String(map(currentSpeed, 50, 255, 0, 9));
       break;
       
     default:
-      Serial.println("Unknown command");
+      response = "ERR:INVALID";
       break;
   }
+  
+  // Send response back to both serial interfaces
+  Serial.println(response);
+  orangePiSerial.println(response);
+}
+
+void toggleSystem() {
+  systemActive = !systemActive;
+  beep(systemActive ? 200 : 400);  // Different tones for on/off
+  
+  if (!systemActive) {
+    stopMotors();  // Safety: stop motors when system is turned off
+  }
+  
+  lastActivityTime = millis();  // Reset watchdog timer
 }
 
 // Motor control functions
+void forward() {
+  digitalWrite(in1, LOW);
+  digitalWrite(in2, HIGH);
+  digitalWrite(in3, HIGH);
+  digitalWrite(in4, LOW);
+}
+
+void backward() {
+  digitalWrite(in1, HIGH);
+  digitalWrite(in2, LOW);
+  digitalWrite(in3, LOW);
+  digitalWrite(in4, HIGH);
+}
+
 void turnLeft() {
   digitalWrite(in1, HIGH);
   digitalWrite(in2, LOW);
@@ -176,20 +245,6 @@ void turnRight() {
   digitalWrite(in4, HIGH);
 }
 
-void backward() {
-  digitalWrite(in1, HIGH);
-  digitalWrite(in2, LOW);
-  digitalWrite(in3, LOW);
-  digitalWrite(in4, HIGH);
-}
-
-void forward() {
-  digitalWrite(in1, LOW);
-  digitalWrite(in2, HIGH);
-  digitalWrite(in3, HIGH);
-  digitalWrite(in4, LOW);
-}
-
 void stopMotors() {
   digitalWrite(in1, LOW);
   digitalWrite(in2, LOW);
@@ -198,10 +253,11 @@ void stopMotors() {
 }
 
 void setSpeed(int speed) {
-  analogWrite(enA, speed);
-  analogWrite(enB, speed);
+  currentSpeed = constrain(speed, 0, 255);
+  analogWrite(enA, currentSpeed);
+  analogWrite(enB, currentSpeed);
 }
 
-void beep() {
-  tone(buzzer, 1000, 200);
+void beep(int duration) {
+  tone(buzzer, 1000, duration);
 }
