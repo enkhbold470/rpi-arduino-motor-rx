@@ -1,6 +1,6 @@
-# ZenBot
+# ZenBot-Pi
 
-[![PyPI version](https://badge.fury.io/py/zenbot.svg)](https://badge.fury.io/py/zenbot)
+[![PyPI version](https://badge.fury.io/py/zenbot-pi.svg)](https://badge.fury.io/py/zenbot-pi)
 [![Python 3.6+](https://img.shields.io/badge/python-3.6+-blue.svg)](https://www.python.org/downloads/release/python-360/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -18,14 +18,14 @@ A Python package for controlling Arduino-based motor robots over I2C communicati
 ### From PyPI
 
 ```bash
-pip install zenbot
+pip install zenbot-pi
 ```
 
 ### From Source
 
 ```bash
-git clone https://github.com/yourusername/zenbot.git
-cd zenbot
+git clone https://github.com/yourusername/zenbot-pi.git
+cd zenbot-pi
 pip install -e .
 ```
 
@@ -52,18 +52,18 @@ The package provides a command-line interface:
 
 ```bash
 # Run interactive control mode
-zenbot interactive
+zenbot-pi interactive
 
 # Run test sequence
-zenbot test
+zenbot-pi test
 
 # Send direct commands
-zenbot direct forward
-zenbot direct stop
-zenbot direct 5  # Set speed to 5
+zenbot-pi direct forward
+zenbot-pi direct stop
+zenbot-pi direct 5  # Set speed to 5
 
 # Use different I2C bus or address
-zenbot --i2c-bus 1 --address 0x09 interactive
+zenbot-pi --i2c-bus 1 --address 0x09 interactive
 ```
 
 ## Using the Library

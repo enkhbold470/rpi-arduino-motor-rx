@@ -1,5 +1,5 @@
 """
-ZenBot - I2C Motor Controller for Raspberry Pi/Arduino robots
+ZenBot-Pi - I2C Motor Controller for Raspberry Pi/Arduino robots
 """
 
 from .motor_controller import MotorController

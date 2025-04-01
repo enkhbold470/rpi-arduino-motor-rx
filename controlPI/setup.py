@@ -4,7 +4,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name="zenbot",
+    name="zenbot-pi",
     version="0.1.0",
     author="Inky Ganbold",
     author_email="enkhbold470@gmail.com",
@@ -32,7 +32,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "zenbot=zenbot.main:main",
+            "zenbot-pi=zenbot.main:main",
         ],
     },
 ) 
