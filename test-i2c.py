@@ -5,7 +5,7 @@ import time
 # --- Configuration ---
 # IMPORTANT: Change this based on 'ls /sys/devices/platform/soc*/*/i2c-* | grep "i2c-[0-9]"'
 # For TWI1 (I2C1) at hardware address 5002400, your output showed i2c-2
-I2C_BUS = 2
+I2C_BUS = 3
 ARDUINO_ADDRESS = 0x08 # The I2C address of the Arduino (must match Arduino code)
 # --- End Configuration ---
 
