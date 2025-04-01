@@ -161,14 +161,14 @@ void backward() {
   digitalWrite(in4, HIGH);
 }
 
-void turnRight() {
+void turnLeft() {
   digitalWrite(in1, HIGH);
   digitalWrite(in2, LOW);
   digitalWrite(in3, HIGH);
   digitalWrite(in4, LOW);
 }
 
-void turnLeft() {
+void turnRight() {
   digitalWrite(in1, LOW);
   digitalWrite(in2, HIGH);
   digitalWrite(in3, LOW);
@@ -190,4 +190,4 @@ void setSpeed(int speed) {
 
 void beep(int duration) {
   tone(buzzer, 1000, duration);
-}
+} 
