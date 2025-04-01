@@ -1,4 +1,4 @@
-#include <SoftwareSerial.h>
+#include <Wire.h>
 
 // Motor control pins
 const int enA = 6;  // Enable motor A
@@ -12,8 +12,8 @@ const int enB = 9;  // Enable motor B
 const int buzzer = A0;
 const int startButton = 12;
 
-// Software Serial (RX, TX)
-SoftwareSerial orangePiSerial(A1, A2); // RX = A1, TX = A2
+// I2C address
+#define SLAVE_ADDRESS 0x08
 
 // Variables
 bool systemActive = false;    // System active flag
@@ -41,8 +41,9 @@ void setup() {
   // Start hardware serial (for debugging)
   Serial.begin(9600);
   
-  // Start software serial for Orange Pi communication
-  orangePiSerial.begin(9600);
+  // Initialize I2C
+  Wire.begin(SLAVE_ADDRESS);
+  Wire.onReceive(receiveEvent);
   
   // Initial state
   stopMotors();
@@ -52,7 +53,6 @@ void setup() {
   delay(100);
   
   Serial.println("BOOT:READY");
-  orangePiSerial.println("BOOT:READY");
 
   // Double beep to indicate ready
   beep(100);
@@ -69,9 +69,6 @@ void loop() {
     beep(150);  // Feedback beep
     delay(200);  // Longer debounce
   }
-
-  // Process serial commands
-  processSerialCommands();
   
   // Check for watchdog timeout
   if (systemActive && millis() - lastActivityTime > WATCHDOG_TIMEOUT) {
@@ -82,49 +79,10 @@ void loop() {
   }
 }
 
-void processSerialCommands() {
-  // Process from Orange Pi serial
-  while (orangePiSerial.available() > 0) {
-    char c = orangePiSerial.read();
-    
-    // Process single character commands immediately
-    if (c == 'F' || c == 'B' || c == 'L' || c == 'R' || c == 'S' || 
-        c == 'X' || c == '?' || (c >= '0' && c <= '9')) {
-      
-      processCommand(c);
-      
-      // Consume any trailing newlines or carriage returns
-      while (orangePiSerial.available() > 0) {
-        char next = orangePiSerial.peek();
-        if (next == '\n' || next == '\r') {
-          orangePiSerial.read(); // Consume it
-        } else {
-          break;
-        }
-      }
-    }
-  }
-  
-  // Process from debug serial
-  while (Serial.available() > 0) {
-    char c = Serial.read();
-    
-    // Process single character commands immediately
-    if (c == 'F' || c == 'B' || c == 'L' || c == 'R' || c == 'S' || 
-        c == 'X' || c == '?' || (c >= '0' && c <= '9')) {
-      
-      processCommand(c);
-      
-      // Consume any trailing newlines or carriage returns
-      while (Serial.available() > 0) {
-        char next = Serial.peek();
-        if (next == '\n' || next == '\r') {
-          Serial.read(); // Consume it
-        } else {
-          break;
-        }
-      }
-    }
+void receiveEvent(int howMany) {
+  if (Wire.available()) {
+    char command = Wire.read();
+    processCommand(command);
   }
 }
 
@@ -200,9 +158,8 @@ void processCommand(char command) {
       break;
   }
   
-  // Send response back to both serial interfaces
+  // Log response to serial for debugging
   Serial.println(response);
-  orangePiSerial.println(response);
 }
 
 void toggleSystem() {
