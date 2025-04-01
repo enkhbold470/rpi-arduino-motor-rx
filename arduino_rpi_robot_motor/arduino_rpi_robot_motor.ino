@@ -146,6 +146,8 @@ void processCommand(char command) {
     case 'X': // Toggle system
       toggleSystem();
       response = "ACK:SYS:" + String(systemActive ? "ON" : "OFF");
+      // Provide audible feedback for toggle
+      beep(systemActive ? 200 : 400);
       break;
       
     case '?': // Status
@@ -164,13 +166,16 @@ void processCommand(char command) {
 
 void toggleSystem() {
   systemActive = !systemActive;
-  beep(systemActive ? 200 : 400);  // Different tones for on/off
   
   if (!systemActive) {
     stopMotors();  // Safety: stop motors when system is turned off
   }
   
   lastActivityTime = millis();  // Reset watchdog timer
+  
+  // Log the state change
+  Serial.print("System is now: ");
+  Serial.println(systemActive ? "ACTIVE" : "INACTIVE");
 }
 
 // Motor control functions
