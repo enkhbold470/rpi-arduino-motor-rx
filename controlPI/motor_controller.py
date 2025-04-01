@@ -21,9 +21,8 @@ class MotorController:
         self.i2c_bus = i2c_bus
         self.address = address
         self.bus = None
-        # This state variable is not synced with Arduino and should not be relied upon directly
-        # Use the local variable in main.py instead
-        self.system_active = False 
+        # System is always active in the simplified version
+        self.system_active = True 
         logger.info(f"Initializing MotorController on I2C bus {i2c_bus}, address 0x{address:02X}")
         self.connect()
        
@@ -126,16 +125,8 @@ class MotorController:
             logger.error(f"Invalid speed level: {level} (must be 0-9)")
             return "ERROR: Invalid speed level (must be 0-9)"
    
-    def toggle_system(self):
-        """Toggle system state (on/off)"""
-        logger.info("Toggling system state")
-        response = self.send_command('X')
-        # Allow time for the Arduino to process toggle command
-        time.sleep(0.5)
-        return response
-   
     def get_status(self):
-        """Get system status"""
+        """Get system status (always on)"""
         logger.info("Requesting system status")
         return self.send_command('?')
    

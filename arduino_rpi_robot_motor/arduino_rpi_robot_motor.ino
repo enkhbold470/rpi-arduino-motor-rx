@@ -16,8 +16,8 @@ const int startButton = 12;
 #define SLAVE_ADDRESS 0x08
 
 // Variables
-bool systemActive = false;    // System active flag
-int currentSpeed = 200;       // Current motor speed (0-255)
+bool systemActive = true;    // System always active by default
+int currentSpeed = 200;      // Current motor speed (0-255)
 unsigned long lastActivityTime = 0;
 const unsigned long WATCHDOG_TIMEOUT = 15000;  // 15 second timeout
 
@@ -53,6 +53,7 @@ void setup() {
   delay(100);
   
   Serial.println("BOOT:READY");
+  Serial.println("System is ACTIVE by default");
 
   // Double beep to indicate ready
   beep(100);
@@ -63,19 +64,20 @@ void setup() {
 }
 
 void loop() {
-  // Check button state for manual toggle
+  // Button now just stops motors for safety (instead of toggle)
   if (digitalRead(startButton) == LOW) {
-    toggleSystem();
+    stopMotors();
     beep(150);  // Feedback beep
     delay(200);  // Longer debounce
+    Serial.println("Emergency stop via button");
   }
   
   // Check for watchdog timeout
-  if (systemActive && millis() - lastActivityTime > WATCHDOG_TIMEOUT) {
+  if (millis() - lastActivityTime > WATCHDOG_TIMEOUT) {
     Serial.println("WATCHDOG: Timeout - stopping motors");
     stopMotors();
-    systemActive = false;
     beep(800);  // Long warning beep
+    lastActivityTime = millis(); // Reset the timer
   }
 }
 
@@ -97,39 +99,23 @@ void processCommand(char command) {
   // Process based on command character
   switch (command) {
     case 'F': // Forward
-      if (systemActive) {
-        forward();
-        response = "ACK:FWD";
-      } else {
-        response = "ERR:INACTIVE";
-      }
+      forward();
+      response = "ACK:FWD";
       break;
       
     case 'B': // Backward
-      if (systemActive) {
-        backward();
-        response = "ACK:BWD";
-      } else {
-        response = "ERR:INACTIVE";
-      }
+      backward();
+      response = "ACK:BWD";
       break;
       
     case 'L': // Left
-      if (systemActive) {
-        turnLeft();
-        response = "ACK:LEFT";
-      } else {
-        response = "ERR:INACTIVE";
-      }
+      turnLeft();
+      response = "ACK:LEFT";
       break;
       
     case 'R': // Right
-      if (systemActive) {
-        turnRight();
-        response = "ACK:RIGHT";
-      } else {
-        response = "ERR:INACTIVE";
-      }
+      turnRight();
+      response = "ACK:RIGHT";
       break;
       
     case 'S': // Stop
@@ -143,16 +129,12 @@ void processCommand(char command) {
       response = "ACK:SPD:" + String(speedLevel);
       break;
       
-    case 'X': // Toggle system
-      toggleSystem();
-      response = "ACK:SYS:" + String(systemActive ? "ON" : "OFF");
-      // Provide audible feedback for toggle
-      beep(systemActive ? 200 : 400);
+    case 'X': // No longer toggles - just a status indicator
+      response = "ACK:SYS:ON";
       break;
       
     case '?': // Status
-      response = "STAT:" + String(systemActive ? "ON" : "OFF") + 
-                ":SPD:" + String(map(currentSpeed, 50, 255, 0, 9));
+      response = "STAT:ON:SPD:" + String(map(currentSpeed, 50, 255, 0, 9));
       break;
       
     default:
@@ -162,20 +144,6 @@ void processCommand(char command) {
   
   // Log response to serial for debugging
   Serial.println(response);
-}
-
-void toggleSystem() {
-  systemActive = !systemActive;
-  
-  if (!systemActive) {
-    stopMotors();  // Safety: stop motors when system is turned off
-  }
-  
-  lastActivityTime = millis();  // Reset watchdog timer
-  
-  // Log the state change
-  Serial.print("System is now: ");
-  Serial.println(systemActive ? "ACTIVE" : "INACTIVE");
 }
 
 // Motor control functions
