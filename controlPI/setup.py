@@ -7,7 +7,7 @@ setup(
     name="zenbot-pi",
     version="0.1.0",
     author="Inky Ganbold",
-    author_email="enkhbold470@gmail.com",
+    author_email="53986637+enkhbold470@users.noreply.github.com",
     description="I2C Motor Controller for Raspberry Pi/Arduino robots",
     long_description=long_description,
     long_description_content_type="text/markdown",
